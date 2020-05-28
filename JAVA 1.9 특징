@@ -1,0 +1,291 @@
+[java] java9(자바9) 새로운 기능 - 변화와 특징 요약
+
+java용 REPL, JShell, JVM Logging 등장
+
+불변 Collection 생성 메서드 제공
+기존에 guava를 사용해서 생성하던 불변 List, Set, Map, Map.Entry 생성 가능
+
+List immutableList = List.of();
+List immutableList = List.of(“one”, “two”, “thress”);
+
+ 
+
+Map immutableMap = Map.of(1, "one", 2, "two");
+
+Java 9 Module System
+Jigsaw Project의 특징
+Modular JDK
+Modular Java Source Code
+Modular Run-time Images
+Encapsulate Java Internal APIs
+Java Platform Module System
+Jigsaw가 주는 이점
+편하고 효율적인 Java 개발 환경을 만들기 위해서 시작
+Jar기반 모노리틱 방식을 개선하여 모듈 지정 및 모듈별 버전 관리 기능이 가능함
+필요한 모듈만 구동하여 크기와 성능 최적화가 가능
+임베디드와 같은 환경에서 필요한 모듈만 탑재되어 적은 메모리로 로딩이 가능함
+간단한 사용법
+// Java 코드 최상위에 module-info.java 파일을 만들고, 아래와 같이 사용함
+module java.sql {
+        requires public java.logging;
+        requires public java.xml;
+        exports java.sql;
+        exports javax.sql;
+        exports javax.transaction.xa;
+}
+자세한 사용법은 아래 링크에서 확인
+
+http://openjdk.java.net/projects/jigsaw/quick-start
+
+프로세스 API 개선
+OS 프로세스 관리 및 컨트롤을 위해서 아래 두개의 패키지가 추가됨
+
+java.lang.ProcessHandle
+java.lang.ProcessHandle.Info
+아래와 같이 사용할 수 있음
+
+ 
+
+ProcessHandle self = ProcessHandle.current();
+long PID = self.getPid();
+ProcessHandle.Info procInfo = self.info();
+
+ 
+
+Optional<String[]> args = procInfo.arguments();
+Optional<String> cmd = procInfo.commandLine();
+Optional<Instant> startTime = procInfo.startInstant();
+Optional<Duration> cpuUsage = procInfo.totalCpuDuration();
+
+ 
+
+// Destroying Processes
+childProc = ProcessHandle.current().children();
+childProc.forEach(procHandle -> {
+       assertTrue("Could not kill process " + procHandle.getPid(), procHandle.destroy());
+});
+
+try-with-resources 개선
+void tryWithResourcesByJava7() throws IOException {
+     BufferedReader reader1 = new BufferedReader(new FileReader("test.txt"));
+
+     try (BufferedReader reader2 = reader1) {
+          // do something
+     }
+}
+
+ 
+
+// final or effectively final이 적용되어 reader 참조를 사용할 수 있음
+void tryWithResourcesByJava9() throws IOException {
+     BufferedReader reader = new BufferedReader(new FileReader("test.txt"));
+
+     try (reader) {
+          // do something
+     }
+}
+
+ 
+Diamond Operator의 한계를 개선
+anonymous inner 클래스에서 diamond operator를 사용할 수 있음
+
+ 
+
+FooClass<Integer> fc = new FooClass<>(1) { 
+     // anonymous inner class
+};
+
+ 
+
+FooClass<? extends Integer> fc0 = new FooClass<>(1) {
+     // anonymous inner class
+};
+
+ 
+
+FooClass<?> fc1 = new FooClass<>(1) { 
+     // anonymous inner class
+};
+
+ 
+
+// 타입 파라메터없이 List만 사용해도 추론이 가능함
+public List getPerson(String id) {
+     return new List(findPersonById(id)){};
+}
+
+ 
+Interface Private Method
+인터페이스 내에서 private 메서드 사용이 가능해짐
+
+interface NewInterface {
+
+private static String staticPrivate() {
+     return "static private";
+}
+
+ 
+
+private String instancePrivate() {
+     return "instance private"; 
+}
+
+ 
+
+default void check() {
+     String result = staticPrivate();
+     NewInterface newIf = new NewInterface() {
+          // anonymous class
+     }; 
+     result = newIf.instancePrivate(); 
+     }
+}}
+
+ 
+CompletableFuthre API 개선
+// 50초후에 새로운 Executor 생성
+Executor executor = CompletableFuture.delayedExecutor(50L, TimeUnit.SECONDS);
+
+ 
+Reactive Stream API 추가
+Reactive Stream을 구현한 Flow API가 추가됨.
+
+ 
+
+java.util.concurrent.Flow
+java.util.concurrent.Flow.Publisher
+java.util.concurrent.Flow.Subscriber
+java.util.concurrent.Flow.Processor
+ 
+
+@FunctionalInterface
+
+public static interface Publisher<T> {
+
+             public void subscribe(Subscriber<?superT> subscriber);
+
+}
+
+public static interface Subscriber<T> {
+
+             public void onSubscribe(Subscription subscription);
+
+             public void onNext(Titem);
+
+             public void onError(Throwable throwable);
+
+             public void onComplete();
+
+}
+
+public static interface Subscription {
+
+             public void request(long n);
+
+             public void cancel();
+
+}
+
+public static interface Processor<T,R> extends Subscriber<T>, Publisher<R> { }
+
+
+ 
+
+설명은 간단하지만, 필자 생각에는 Java 9의 가장 큰 변화중 하나임.
+
+ 
+Optional To Stream
+Stream<Optional> person = getPerson(id);
+// Optional.stream은 Stream<Optional>을 Stream<Person>으로 바꾸어줌
+Stream personStream = person.flatMap(Optional::stream);
+
+ 
+
+// 아래와 같이 Optional로 Stream을 생성할 수 있음. 
+Stream<Integer> stream = Optional.of(1).stream();
+
+Stream API 개선
+// iterate에 아래와 같이 Predicate을 받을 수 있는 인터페이스 추가
+IntStream.iterate(1, i -> i < 100, i -> i + 1)
+             .forEach(System.out::println);
+
+ 
+
+// 아래 Stream 인터페이스 추가
+dropWhile
+takeWhile
+ofNullable
+
+HTTP2 클라이언트
+HttpURLConnection를 대체함
+“jdk.incubator.http” 패키지 추가됨
+HTTP/1.1 및 HTTP/2 프로토콜 지원
+동기/비동기 모드 지원
+Apache HttpClient, Netty, Jetty와 비교할 수 있는 성능
+// 동기 호출
+HttpResponse response = HttpRequest
+                      .create(new URI("http://www.ocado.com"))
+                      .body(noBody())
+                      .GET().send();
+
+ 
+
+int responseCode = response.responseCode();
+String responseBody = response.body(asString());
+System.out.println(responseBody);
+
+ 
+
+// 비동기 호출
+HttpRequest request = HttpRequest
+                      .create(new URI("http://www.ocado.com"))
+                      .body(noBody())
+                      .GET();
+
+ 
+
+CompletableFuture<HttpResponse> future = request.sendAsync();
+Thread.sleep(10);
+if (!future.isDone()) {
+     future.cancel(true);
+     System.err.println("timeout");
+     return;
+}
+
+ 
+
+HttpResponse response = future.get();
+
+ 
+Multi-Resolution Image API
+java.awt.image.MultiResolutionImage 인터페이스 추가
+해상도가 다른 이미지들을 하나의 객체로 캡슐화할 수 있음
+요구사항을 통해서 이미지 쿼리 가능
+Multi-release JARs
+특정 버전에서만 원하는 클래스가 동작하도록 할 수 있음
+
+multirelease.jar
+├── META-INF
+│        └── versions
+│                 └── 9
+│                          └── multirelease
+│                                   └── Helper.class
+├── multirelease
+        ├── Helper.class
+        └── Main.class
+ 
+
+여기서 multirelease.jar는 Java 9에서만 META-INF / versions / 9에 있는 Helper.class가 동작되도록 할 수 있다. 이렇게하면 이 Helper.class내에서는 Java 9의 기능을 온전히 활용할 수 있다. 동시에 이전 Java 버전에서 이 JAR를 사용해도 최상위 Helper.class가 사용되기 때문에 Java 버전에 관계없이 동일한 JAR로 호환이 가능하다.
+
+기타 변경 및 개선 사항
+GC 개선
+Stack-Walking API
+Filter Incoming Serialization Data
+Deprecate the Applet API
+Indify String Concatenation
+Enhanced Method Handles
+Java Platform Logging API and Service
+Compact Strings
+Parser API for Nashorn
+Javadoc에 검색 기능 추가
+HTML5 Javadoc
